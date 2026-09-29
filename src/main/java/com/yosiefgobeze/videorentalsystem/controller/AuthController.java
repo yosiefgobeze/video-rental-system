@@ -5,8 +5,11 @@ import com.yosiefgobeze.videorentalsystem.dto.RegisterRequest;
 import com.yosiefgobeze.videorentalsystem.model.Role;
 import com.yosiefgobeze.videorentalsystem.model.User;
 import com.yosiefgobeze.videorentalsystem.repository.UserRepository;
+import com.yosiefgobeze.videorentalsystem.security.JwtUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,10 +21,12 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtils jwtUtils) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
     }
 
     @PostMapping("/register")
@@ -45,9 +50,12 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public ResponseEntity<?> login() {
-        // Handled automatically via Spring Security Basic Auth filter chain.
-        // If authentication passes, this endpoint returns a 200 OK.
-        return ResponseEntity.ok(Map.of("message", "Logged in successfully"));
+    public ResponseEntity<?> login(@AuthenticationPrincipal UserDetails userDetails)  {
+        // Basic Auth validates first. If valid, we issue a stateless JWT token.
+        String token = jwtUtils.generateToken(userDetails);
+        return ResponseEntity.ok(Map.of(
+                "message", "Logged in successfully",
+                "token", token
+        ));
     }
 }
